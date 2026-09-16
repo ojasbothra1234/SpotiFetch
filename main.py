@@ -719,8 +719,15 @@ def get_local_ip() -> str:
 
 if __name__ == "__main__":
     import uvicorn
-    host = os.environ.get("HOST", "0.0.0.0")
-    port = int(os.environ.get("PORT", "8000"))
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="SpotiFetch Server")
+    parser.add_argument("-p", "--port", type=int, default=int(os.environ.get("PORT", "5000")), help="Port to listen on (default: 5000)")
+    parser.add_argument("--host", type=str, default=os.environ.get("HOST", "0.0.0.0"), help="Host to listen on (default: 0.0.0.0)")
+    args, _ = parser.parse_known_args()
+
+    host = args.host
+    port = args.port
     local_ip = get_local_ip()
     current_password = get_app_password()
 
@@ -737,3 +744,4 @@ if __name__ == "__main__":
     print("    (To change password, edit password.txt or set APP_PASSWORD)")
     print("="*62 + "\n")
     uvicorn.run("main:app", host=host, port=port, reload=True)
+

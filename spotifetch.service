@@ -10,7 +10,8 @@ ExecStart=/var/www/spotify-downloader/.venv/bin/python main.py
 Restart=always
 RestartSec=5
 Environment=HOST=0.0.0.0
-Environment=PORT=8000
+Environment=PORT=5000
+
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 
 [Install]

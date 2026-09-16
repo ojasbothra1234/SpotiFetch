@@ -50,7 +50,7 @@ if ! "$PYTHON_CMD" -c "import fastapi, spotdl, uvicorn" &>/dev/null; then
 fi
 
 HOST="${HOST:-0.0.0.0}"
-PORT="${PORT:-8000}"
+PORT="${PORT:-5000}"
 
 echo "🚀 SpotiFetch is running on http://$HOST:$PORT"
 echo ""
@@ -62,4 +62,5 @@ elif command -v open &>/dev/null; then
     (sleep 1 && open "http://localhost:$PORT" &>/dev/null &)
 fi
 
-exec "$PYTHON_CMD" main.py
+exec "$PYTHON_CMD" main.py --port "$PORT" --host "$HOST" "$@"
+
