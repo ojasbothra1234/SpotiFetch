@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# Downloaded files & temporary archives
+downloads/
+*.mp3
+*.m4a
+*.flac
+*.opus
+*.ogg
+*.wav
+*.zip
+*.spotdl
+*.log
+
+# Local binaries (handled automatically by installer scripts)
+bin/
+ffmpeg/
+*.exe
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

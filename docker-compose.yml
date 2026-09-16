@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  spotifetch:
+    build: .
+    container_name: spotifetch
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      # Persist temporary/completed downloads to host if desired
+      - ./downloads:/app/downloads

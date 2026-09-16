@@ -1,0 +1,17 @@
+[Unit]
+Description=SpotiFetch - Spotify Media Downloader WebApp
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/spotify-downloader
+ExecStart=/var/www/spotify-downloader/.venv/bin/python main.py
+Restart=always
+RestartSec=5
+Environment=HOST=0.0.0.0
+Environment=PORT=8000
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=multi-user.target

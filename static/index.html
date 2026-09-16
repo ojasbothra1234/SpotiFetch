@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpotiFetch - Spotify Media Downloader</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        spotify: {
+                            green: '#1DB954',
+                            greenHover: '#1ed760',
+                            dark: '#121212',
+                            card: '#181818',
+                            hover: '#282828',
+                            lightText: '#b3b3b3'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background: radial-gradient(circle at 50% 0%, #1f3b25 0%, #121212 55%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(24, 24, 24, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .pulse-glow {
+            box-shadow: 0 0 25px rgba(29, 185, 84, 0.35);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #181818;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1DB954;
+        }
+    </style>
+</head>
+<body class="text-white font-sans antialiased flex flex-col justify-between min-h-screen">
+
+    <!-- Authentication / Lock Screen Modal -->
+    <div id="authOverlay" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 transition-all duration-300 hidden">
+        <div class="w-full max-w-md glass-card rounded-3xl p-8 border border-white/15 shadow-2xl space-y-6 text-center">
+            <div class="w-16 h-16 rounded-full bg-spotify-green/20 border border-spotify-green/30 text-spotify-green flex items-center justify-center mx-auto shadow-lg pulse-glow">
+                <i data-lucide="lock" class="w-8 h-8"></i>
+            </div>
+            
+            <div class="space-y-1">
+                <h2 class="text-2xl font-extrabold tracking-tight text-white">Protected Access</h2>
+                <p class="text-xs text-spotify-lightText">Enter the access password to use SpotiFetch on this device.</p>
+            </div>
+
+            <form id="authForm" class="space-y-4">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-spotify-lightText">
+                        <i data-lucide="key-round" class="w-4 h-4"></i>
+                    </div>
+                    <input 
+                        type="password" 
+                        id="authPasswordInput" 
+                        placeholder="Enter site password..."
+                        required
+                        autocomplete="current-password"
+                        class="w-full pl-10 pr-10 py-3.5 bg-spotify-dark/90 border border-white/15 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-spotify-green focus:ring-2 focus:ring-spotify-green/20 text-sm transition-all"
+                    >
+                    <button 
+                        type="button" 
+                        id="toggleAuthPasswordBtn" 
+                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-neutral-400 hover:text-white"
+                        title="Show/Hide Password"
+                    >
+                        <i data-lucide="eye" class="w-4 h-4" id="eyeIcon"></i>
+                    </button>
+                </div>
+
+                <!-- Auth Error Message Box -->
+                <div id="authErrorBox" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs text-left flex items-center gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+                    <span id="authErrorMessage">Incorrect password.</span>
+                </div>
+
+                <button 
+                    type="submit" 
+                    id="authSubmitBtn"
+                    class="w-full py-3.5 px-6 rounded-xl bg-spotify-green hover:bg-spotify-greenHover text-black font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all transform hover:scale-[1.01] active:scale-[0.99] pulse-glow"
+                >
+                    <i data-lucide="unlock" class="w-4 h-4"></i>
+                    <span>Unlock SpotiFetch</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Navigation Header -->
+    <header class="w-full border-b border-white/5 py-4 px-6 md:px-12 flex items-center justify-between glass-card sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-spotify-green flex items-center justify-center text-black font-bold shadow-lg">
+                <i data-lucide="music-2" class="w-6 h-6 text-black"></i>
+            </div>
+            <div>
+                <span class="text-xl font-bold tracking-tight text-white flex items-center gap-1">
+                    Spoti<span class="text-spotify-green">Fetch</span>
+                </span>
+                <span class="text-xs text-spotify-lightText block">Web & Server Downloader</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3 text-xs md:text-sm">
+            <span class="px-3 py-1 rounded-full bg-spotify-green/10 text-spotify-green border border-spotify-green/30 flex items-center gap-1.5 font-medium">
+                <span class="w-2 h-2 rounded-full bg-spotify-green animate-pulse"></span>
+                LAN Online
+            </span>
+            <button 
+                id="logoutBtn" 
+                class="hidden px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-400 hover:text-white flex items-center gap-1.5 font-medium transition-colors"
+                title="Lock Session"
+            >
+                <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                <span>Lock</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-8 md:py-12 flex flex-col items-center">
+        
+        <!-- Hero Section -->
+        <div class="text-center space-y-3 mb-8">
+            <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight">
+                Download Spotify <span class="text-transparent bg-clip-text bg-gradient-to-r from-spotify-green to-emerald-400">Everything</span>
+            </h1>
+            <p class="text-spotify-lightText max-w-xl mx-auto text-sm md:text-base">
+                Download singles, full albums, playlists, podcasts, and <strong>entire artist discographies</strong> directly with customizable song selection and audio format.
+            </p>
+        </div>
+
+        <!-- Format Supported Pills -->
+        <div class="flex flex-wrap justify-center gap-2 mb-8 text-xs font-medium text-spotify-lightText">
+            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5">
+                <i data-lucide="music" class="w-3.5 h-3.5 text-spotify-green"></i> Tracks / Singles
+            </span>
+            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5">
+                <i data-lucide="disc" class="w-3.5 h-3.5 text-spotify-green"></i> Albums
+            </span>
+            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5">
+                <i data-lucide="list-music" class="w-3.5 h-3.5 text-spotify-green"></i> Playlists
+            </span>
+            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5">
+                <i data-lucide="user" class="w-3.5 h-3.5 text-spotify-green"></i> Full Artist Discography
+            </span>
+            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-spotify-green"></i> Password Protected
+            </span>
+        </div>
+
+        <!-- Input Box Section -->
+        <div class="w-full glass-card rounded-2xl p-6 md:p-8 shadow-2xl space-y-4">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-spotify-lightText">
+                    <i data-lucide="link" class="w-5 h-5"></i>
+                </div>
+                <input 
+                    type="text" 
+                    id="spotifyUrlInput" 
+                    placeholder="Paste Spotify track, album, playlist, or artist link here..."
+                    class="w-full pl-12 pr-28 py-4 bg-spotify-dark/90 border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-spotify-green focus:ring-2 focus:ring-spotify-green/20 text-sm md:text-base transition-all"
+                >
+                <div class="absolute inset-y-0 right-2 flex items-center">
+                    <button 
+                        id="pasteBtn"
+                        type="button" 
+                        class="px-3 py-1.5 text-xs text-spotify-lightText hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1"
+                        title="Paste from Clipboard"
+                    >
+                        <i data-lucide="clipboard" class="w-3.5 h-3.5"></i> Paste
+                    </button>
+                </div>
+            </div>
+
+            <!-- Controls Row: Detected Type & Format Selector -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+                <!-- Detected Type Indicator -->
+                <div id="typeIndicator" class="hidden flex items-center gap-1.5 text-xs text-spotify-lightText">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-spotify-green"></i>
+                    Detected: <strong id="detectedTypeText" class="text-white">Track</strong>
+                </div>
+                <div id="typeIndicatorPlaceholder" class="text-xs text-neutral-500 flex items-center gap-1.5">
+                    <i data-lucide="info" class="w-3.5 h-3.5 text-neutral-500"></i> Paste any Spotify link above
+                </div>
+
+                <!-- Audio Format Selector -->
+                <div class="flex items-center gap-2 text-xs">
+                    <label for="formatSelect" class="text-spotify-lightText flex items-center gap-1 font-medium whitespace-nowrap">
+                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-spotify-green"></i> Format:
+                    </label>
+                    <select id="formatSelect" class="bg-spotify-dark border border-white/15 rounded-lg px-2.5 py-1.5 text-white text-xs font-semibold focus:outline-none focus:border-spotify-green focus:ring-1 focus:ring-spotify-green cursor-pointer">
+                        <option value="mp3" selected>MP3 (Default • High Quality)</option>
+                        <option value="m4a">M4A (AAC)</option>
+                        <option value="flac">FLAC (Lossless)</option>
+                        <option value="opus">OPUS</option>
+                        <option value="ogg">OGG</option>
+                        <option value="wav">WAV</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Action Buttons Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <!-- Direct Download All Button -->
+                <button 
+                    id="startDownloadBtn"
+                    class="w-full py-3.5 px-5 rounded-xl bg-spotify-green hover:bg-spotify-greenHover text-black font-bold text-sm md:text-base flex items-center justify-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] pulse-glow disabled:opacity-50 disabled:pointer-events-none"
+                >
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>Download All (<span id="downloadBtnFormatText">MP3</span>)</span>
+                </button>
+
+                <!-- Preview & Select Specific Tracks Button -->
+                <button 
+                    id="previewTracksBtn"
+                    class="w-full py-3.5 px-5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white font-bold text-sm md:text-base flex items-center justify-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none"
+                >
+                    <i data-lucide="list-checks" class="w-4 h-4 text-spotify-green"></i>
+                    <span>Select Specific Songs</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Track Selection Section (Shown when "Select Specific Songs" is clicked) -->
+        <div id="trackSelectionSection" class="w-full glass-card rounded-2xl p-6 md:p-8 shadow-2xl space-y-4 hidden mt-6 border border-white/15">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/10 pb-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="previewTypeBadge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-spotify-green/20 text-spotify-green uppercase tracking-wider">
+                            ALBUM
+                        </span>
+                        <h3 class="font-bold text-lg text-white">Select Songs to Download</h3>
+                    </div>
+                    <p id="trackSelectionSubtitle" class="text-xs text-spotify-lightText mt-0.5">Pick the specific songs you want to download.</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button id="selectAllBtn" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-semibold text-spotify-lightText hover:text-white transition-colors">
+                        Select All
+                    </button>
+                    <button id="deselectAllBtn" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-semibold text-spotify-lightText hover:text-white transition-colors">
+                        Deselect All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search filter and counter bar -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-neutral-500"></i>
+                    <input 
+                        type="text" 
+                        id="trackSearchInput" 
+                        placeholder="Filter songs by title or artist..." 
+                        class="w-full pl-9 pr-3 py-2 bg-spotify-dark/90 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-spotify-green text-xs"
+                    >
+                </div>
+                <div class="text-neutral-400 font-medium whitespace-nowrap flex items-center gap-1.5 self-center sm:self-auto">
+                    <i data-lucide="check-square" class="w-3.5 h-3.5 text-spotify-green"></i>
+                    <span id="selectionCounterText">0 of 0 selected</span>
+                </div>
+            </div>
+
+            <!-- Scrollable track list -->
+            <div id="trackListContainer" class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                <!-- Dynamically injected track items -->
+            </div>
+
+            <!-- Actions footer -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-white/10">
+                <button id="closeTrackSelectionBtn" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-neutral-400 hover:text-white font-semibold transition-colors">
+                    Cancel
+                </button>
+
+                <button 
+                    id="downloadSelectedBtn" 
+                    class="w-full sm:w-auto px-6 py-3 rounded-xl bg-spotify-green hover:bg-spotify-greenHover text-black font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span id="downloadSelectedBtnText">Download Selected Songs (MP3)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dynamic Status / Progress Section -->
+        <div id="taskSection" class="w-full mt-6 space-y-4 hidden">
+
+            <!-- Active Task Progress Card -->
+            <div class="glass-card rounded-2xl p-6 border border-white/10 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div id="statusIconContainer" class="w-8 h-8 rounded-full bg-spotify-green/20 flex items-center justify-center text-spotify-green">
+                            <i id="statusIcon" data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+                        </div>
+                        <div>
+                            <h3 id="taskStatusTitle" class="font-semibold text-sm md:text-base text-white">Initializing Download...</h3>
+                            <p id="taskStatusSubtitle" class="text-xs text-spotify-lightText truncate max-w-xs md:max-w-md">Connecting to sources...</p>
+                        </div>
+                    </div>
+                    <span id="taskTypeBadge" class="px-2.5 py-1 rounded-md text-xs font-semibold bg-white/10 text-white uppercase tracking-wider">
+                        TRACK
+                    </span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full bg-white/5 rounded-full h-2 overflow-hidden">
+                    <div id="progressBar" class="bg-spotify-green h-2 rounded-full w-full transition-all duration-500 animate-pulse"></div>
+                </div>
+
+                <!-- Live Log Output Toggle -->
+                <div class="pt-2">
+                    <button id="toggleLogsBtn" class="text-xs text-spotify-lightText hover:text-white flex items-center gap-1 transition-colors">
+                        <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                        <span>Show Terminal Logs</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5" id="logChevron"></i>
+                    </button>
+                    <div id="logContainer" class="hidden mt-2 p-3 bg-black/60 rounded-xl border border-white/5 font-mono text-xs text-neutral-300 max-h-40 overflow-y-auto space-y-1">
+                        <div class="text-neutral-500">Connecting to server...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ready Download Box -->
+            <div id="readyBox" class="hidden glass-card rounded-2xl p-6 border border-spotify-green/40 bg-spotify-green/5 space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-spotify-green"></i>
+                            <h4 class="font-bold text-white text-base">Your Download is Ready!</h4>
+                        </div>
+                        <p id="readyFileName" class="text-xs md:text-sm text-spotify-lightText font-mono break-all">song_file.mp3</p>
+                        <div class="flex items-center gap-3 text-xs text-neutral-400">
+                            <span id="readyFileSize">0.0 MB</span>
+                            <span>•</span>
+                            <span id="readyItemCount">1 item</span>
+                        </div>
+                    </div>
+                    <a 
+                        id="finalDownloadLink" 
+                        href="#" 
+                        class="px-6 py-3.5 rounded-xl bg-spotify-green hover:bg-spotify-greenHover text-black font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all transform hover:scale-105 shrink-0"
+                    >
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Save to Device</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Error Box -->
+            <div id="errorBox" class="hidden glass-card rounded-2xl p-6 border border-red-500/40 bg-red-500/10 space-y-2">
+                <div class="flex items-center gap-2 text-red-400 font-semibold text-sm">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                    <span>Download Failed</span>
+                </div>
+                <p id="errorMessage" class="text-xs text-neutral-300"></p>
+            </div>
+        </div>
+
+        <!-- Recent Tasks / History -->
+        <div id="historySection" class="w-full mt-10 space-y-3">
+            <h3 class="text-sm font-semibold text-spotify-lightText uppercase tracking-wider flex items-center gap-2">
+                <i data-lucide="history" class="w-4 h-4"></i> Recent Downloads
+            </h3>
+            <div id="historyList" class="space-y-2">
+                <!-- Dynamically populated -->
+                <div class="text-xs text-neutral-500 italic">No previous downloads in this session.</div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full border-t border-white/5 py-6 px-6 text-center text-xs text-spotify-lightText">
+        <p>Built for local & LAN hosting. SpotDL & FastAPI powered.</p>
+    </footer>
+
+    <!-- App JavaScript -->
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
