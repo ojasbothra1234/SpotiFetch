@@ -1,6 +1,11 @@
-spotdl>=4.2.5
+spotdl>=4.4.0
+spotapi>=1.2.8
+curl_cffi>=0.7.0
+yt-dlp>=2024.08.06
+fastapi>=0.100.0
 uvicorn[standard]>=0.23.0
 aiofiles>=23.2.1
 pydantic>=2.0.0
 python-multipart>=0.0.6
+
 
